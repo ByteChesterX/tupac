@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="vrchester/tupac"
+REPO="ByteChesterX/tupac"
 BINARY="tupac"
 INSTALL_DIR="/usr/local/bin"
 
