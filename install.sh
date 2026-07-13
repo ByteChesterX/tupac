@@ -14,7 +14,7 @@ echo -e "${CYAN}TUPAC - Package Manager${NC}"
 echo ""
 
 # check dependencies
-for cmd in curl tar; do
+for cmd in curl; do
     if ! command -v "$cmd" &>/dev/null; then
         echo -e "${RED}Error: $cmd is required but not installed.${NC}"
         exit 1
@@ -34,40 +34,32 @@ case "$ARCH" in
 esac
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ASSET="${BINARY}-${OS}-${ARCH}"
-
-# detect latest release
-echo -n "Detecting latest release... "
-LATEST=$(curl -sL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
-if [ -z "$LATEST" ]; then
-    echo -e "${RED}failed${NC}"
-    echo "Could not fetch latest release. Check the repository URL."
-    exit 1
-fi
-echo -e "${GREEN}${LATEST}${NC}"
-
-# download
-URL="https://github.com/${REPO}/releases/download/${LATEST}/${ASSET}"
-echo -n "Downloading ${ASSET}... "
+ASSET="${BINARY}-${OS}-${ARCH}.tar.gz"
 
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
-HTTP_CODE=$(curl -sL -w "%{http_code}" -o "${TMPDIR}/${BINARY}" "$URL")
-if [ "$HTTP_CODE" != "200" ]; then
-    # try tarball fallback
-    URL="https://github.com/${REPO}/releases/download/${LATEST}/${ASSET}.tar.gz"
-    HTTP_CODE=$(curl -sL -w "%{http_code}" -o "${TMPDIR}/${BINARY}.tar.gz" "$URL")
-    if [ "$HTTP_CODE" != "200" ]; then
-        echo -e "${RED}failed (HTTP ${HTTP_CODE})${NC}"
-        echo "Binary not found for ${OS}-${ARCH}."
-        echo "URL: $URL"
-        exit 1
-    fi
-    cd "$TMPDIR" && tar xzf "${BINARY}.tar.gz" && cd -
+# try downloading latest release
+URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
+echo -n "Downloading ${ASSET}... "
+
+HTTP_CODE=$(curl -sL -w "%{http_code}" -o "${TMPDIR}/${ASSET}" "$URL")
+if [ "$HTTP_CODE" = "200" ]; then
+    echo -e "${GREEN}ok${NC}"
+else
+    echo -e "${RED}failed (HTTP ${HTTP_CODE})${NC}"
+    echo "Could not download from: $URL"
+    echo ""
+    echo "You can manually download from:"
+    echo "  https://github.com/${REPO}/releases"
+    exit 1
 fi
 
-chmod +x "${TMPDIR}/${BINARY}"
+# extract
+cd "$TMPDIR"
+tar xzf "${ASSET}"
+chmod +x "${BINARY}"
+cd -
 
 # install
 echo -n "Installing to ${INSTALL_DIR}/${BINARY}... "
