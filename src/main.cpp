@@ -136,7 +136,7 @@ static std::vector<Package> searchPackages(PkgManager pm, const std::string& que
             cmd = "dnf search '" + query + "' 2>/dev/null";
             break;
         case PkgManager::APT:
-            cmd = "apt search '" + query + "' 2>/dev/null";
+            cmd = "apt-cache search --names-only '" + query + "' 2>/dev/null";
             break;
         default:
             return result;
@@ -192,19 +192,13 @@ static std::vector<Package> searchPackages(PkgManager pm, const std::string& que
         }
     } else if (pm == PkgManager::APT) {
         while (std::getline(iss, line)) {
-            if (line.empty() || line[0] == '%' || line.find("Listing") != std::string::npos) continue;
-            size_t sp1 = line.find('/');
-            if (sp1 == std::string::npos) continue;
-            std::string name = line.substr(0, sp1);
-            std::string rest = trim(line.substr(sp1 + 1));
-            std::string version = "";
-            std::string desc = rest;
-            size_t space = rest.find(' ');
-            if (space != std::string::npos) {
-                version = rest.substr(0, space);
-                desc = trim(rest.substr(space + 1));
-            }
-            result.push_back({name, version, desc, "", installed.count(name) > 0});
+            line = trim(line);
+            if (line.empty()) continue;
+            size_t dash = line.find(" - ");
+            if (dash == std::string::npos) continue;
+            std::string name = trim(line.substr(0, dash));
+            std::string desc = trim(line.substr(dash + 3));
+            result.push_back({name, "", desc, "", installed.count(name) > 0});
         }
     }
 
